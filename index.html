@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#202B63">
+<meta name="description" content="Botón para avisarle al grupo de Telegram que ya viene Adhara.">
+<title>Adhara</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --noche: #202B63;
+    --noche-honda: #141B45;
+    --cielo: #34458F;
+    --estrella: #EEF4FF;
+    --halo: #9DBEFF;
+    --texto: #F3F6FF;
+    --texto-suave: #B9C5EF;
+    --ambar: #FFD47E;
+    --rosa: #FF9DC4;
+    --rojo: #FF8F86;
+    --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+    --cuerpo: "Lexend", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --d: min(74vw, 44dvh, 340px);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  html { background: var(--noche-honda); }
+  body {
+    font-family: var(--cuerpo);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--texto);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cielo {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 120% 80% at 50% 40%, var(--cielo) 0%, var(--noche) 45%, var(--noche-honda) 100%);
+  }
+  .cielo svg { width: 100%; height: 100%; }
+  [hidden] { display: none !important; }
+
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--halo); outline-offset: 4px; }
+
+  /* ---------- Vista del botón ---------- */
+  #vista-boton {
+    position: relative; z-index: 1;
+    min-height: 100dvh;
+    max-width: 520px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    padding: max(14px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  }
+  .barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; }
+  .marca { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 1.5rem; letter-spacing: .01em; }
+  .marca svg { width: 22px; height: 22px; }
+  .icono {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,.08); border: 1.5px solid rgba(255,255,255,.18);
+  }
+  .icono svg { width: 24px; height: 24px; }
+
+  .centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 12px 0; text-align: center; }
+  .instruccion { margin: 0; font-size: 1.1rem; color: var(--texto-suave); }
+
+  .aviso-config {
+    width: 100%; text-align: left;
+    background: rgba(255,255,255,.08); border: 1.5px solid rgba(255,255,255,.2); border-radius: 20px;
+    padding: 16px 18px; display: grid; gap: 12px;
+  }
+  .aviso-config p { margin: 0; }
+
+  .estrella-wrap {
+    position: relative;
+    width: calc(var(--d) + 34px); height: calc(var(--d) + 34px);
+    display: grid; place-items: center;
+  }
+  .anillo { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+  .anillo circle { fill: none; stroke-width: 5; }
+  .anillo .pista { stroke: rgba(255,255,255,.14); }
+  .anillo .progreso { stroke: var(--estrella); stroke-linecap: round; stroke-dasharray: 603.19; stroke-dashoffset: 603.19; opacity: 0; stroke-width: 6; }
+
+  .estrella {
+    position: relative;
+    width: var(--d); height: var(--d); border-radius: 50%;
+    border: 0; padding: 0 12%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    color: var(--noche);
+    background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #E9F1FF 48%, #BCD2FF 100%);
+    box-shadow: 0 0 36px 8px rgba(157,190,255,.45), 0 0 120px 36px rgba(157,190,255,.16), inset 0 -10px 30px rgba(32,43,99,.12);
+    transition: transform .25s ease, box-shadow .25s ease, background .3s ease;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .estrella .titulo { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 8.4vw, 2.7rem); line-height: 1.02; }
+  .estrella .sub { font-weight: 500; font-size: clamp(1rem, 4.2vw, 1.2rem); opacity: .85; }
+  .estrella[data-estado="sosteniendo"] { box-shadow: 0 0 50px 14px rgba(157,190,255,.6), 0 0 150px 50px rgba(157,190,255,.22); }
+  .estrella[data-estado="enviando"] { opacity: .9; }
+  .estrella[data-estado="pendiente"] { background: radial-gradient(circle at 50% 42%, #FFFDF5 0%, #FFF0CF 55%, #FFD98F 100%); }
+  .estrella[data-estado="error"] { background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #FFE6E3 55%, #FFB7AF 100%); }
+  .estrella[aria-disabled="true"] { filter: saturate(.4) brightness(.8); box-shadow: 0 0 24px 4px rgba(157,190,255,.2); }
+
+  .estrella-wrap::after {
+    content: ""; position: absolute; inset: -22%; border-radius: 50%; pointer-events: none;
+    background: repeating-conic-gradient(from 0deg, rgba(238,244,255,.7) 0deg 3deg, transparent 3deg 22.5deg);
+    -webkit-mask: radial-gradient(circle, transparent 40%, #000 44%, transparent 72%);
+            mask: radial-gradient(circle, transparent 40%, #000 44%, transparent 72%);
+    opacity: 0; transform: scale(.75);
+  }
+  .estrella-wrap.destello::after { animation: rayos 1100ms cubic-bezier(.2,.7,.3,1); }
+  @keyframes rayos { 0% { opacity: .95; transform: scale(.75) rotate(0deg); } 100% { opacity: 0; transform: scale(1.3) rotate(14deg); } }
+
+  .estado { margin: 0; min-height: 3em; max-width: 34ch; color: var(--texto-suave); font-size: 1rem; }
+  .estado strong { color: var(--texto); font-weight: 600; }
+
+  .alerta { border-radius: 20px; padding: 14px 16px; margin-bottom: 14px; display: grid; gap: 12px; border: 1.5px solid; }
+  .alerta p { margin: 0; }
+  .alerta.ambar { background: rgba(255,212,126,.12); border-color: rgba(255,212,126,.55); }
+  .alerta.rojo { background: rgba(255,143,134,.12); border-color: rgba(255,143,134,.6); }
+  .respaldo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .secundarios { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .sec-btn {
+    position: relative; overflow: hidden;
+    min-height: 88px; border-radius: 24px; padding: 10px 12px;
+    background: rgba(255,255,255,.07); border: 2px solid currentColor;
+    font-family: var(--display); font-weight: 700; font-size: 1.15rem; line-height: 1.15;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .sec-btn::before {
+    content: ""; position: absolute; inset: 0; background: currentColor; opacity: .28;
+    transform: scaleX(var(--p, 0)); transform-origin: left center;
+  }
+  .sec-btn span { position: relative; }
+  .sec-btn.ambar { color: var(--ambar); }
+  .sec-btn.rosa { color: var(--rosa); }
+  .sec-btn[aria-disabled="true"] { opacity: .45; }
+  .sec-btn[data-estado="enviado"]::before { transform: scaleX(1); }
+
+  /* ---------- Botones comunes ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 50px; padding: 0 18px; border-radius: 14px; border: 0;
+    background: var(--estrella); color: var(--noche);
+    font-family: var(--display); font-weight: 700; font-size: 1.1rem; text-decoration: none; text-align: center;
+  }
+  .btn.sec { background: transparent; color: var(--texto); border: 1.5px solid rgba(255,255,255,.45); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  /* ---------- Configuración ---------- */
+  #vista-config {
+    position: relative; z-index: 1;
+    max-width: 560px; margin: 0 auto;
+    padding: max(14px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
+  }
+  #vista-config .barra { position: sticky; top: 0; z-index: 2; padding: 8px 0; background: linear-gradient(var(--noche) 70%, transparent); }
+  #vista-config h1 { margin: 0; font-family: var(--display); font-size: 1.8rem; line-height: 1.1; }
+  #vista-config h2 { margin: 0 0 8px; font-family: var(--display); font-size: 1.35rem; line-height: 1.2; }
+  .bloque { margin: 18px 0 26px; }
+  .bloque > p { margin: 0 0 12px; }
+  .pasos { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; color: var(--texto-suave); }
+  .pasos b, .pasos code { color: var(--texto); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .92em; background: rgba(255,255,255,.1); padding: 1px 6px; border-radius: 6px; overflow-wrap: anywhere; }
+  form { display: grid; gap: 20px; }
+  .campo { display: grid; gap: 6px; }
+  .campo > span, legend { font-weight: 600; }
+  input[type="text"], input:not([type]), input[type="tel"], select, textarea {
+    width: 100%; min-height: 52px; padding: 12px 14px; border-radius: 14px;
+    background: rgba(255,255,255,.08); border: 1.5px solid rgba(255,255,255,.25);
+  }
+  textarea { resize: vertical; font-size: .92rem; word-break: break-all; }
+  select option { color: #141B45; }
+  input:focus, select:focus, textarea:focus { border-color: var(--halo); outline: none; box-shadow: 0 0 0 3px rgba(157,190,255,.35); }
+  ::placeholder { color: rgba(185,197,239,.6); }
+  .fila { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .nota { margin: 0; font-size: .95rem; color: var(--texto-suave); }
+  .nota.ok { color: #A8F0C6; }
+  .nota.mal { color: var(--rojo); }
+  details { margin-top: 4px; }
+  details summary { cursor: pointer; color: var(--texto-suave); padding: 6px 0; }
+  details[open] summary { margin-bottom: 8px; }
+  details .nota { margin-top: 8px; }
+  details a, .bloque a { color: var(--halo); }
+  fieldset { border: 1.5px solid rgba(255,255,255,.2); border-radius: 18px; padding: 12px 16px 16px; margin: 0; display: grid; gap: 14px; }
+  legend { padding: 0 6px; }
+  .check { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+  .check input { width: 24px; height: 24px; accent-color: var(--halo); }
+  .acciones { display: grid; gap: 10px; }
+  .pila { display: grid; gap: 10px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 10;
+    transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+    background: var(--estrella); color: var(--noche); font-weight: 600;
+    padding: 12px 18px; border-radius: 14px; max-width: calc(100vw - 40px); text-align: center;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.ver { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .estrella, .toast { transition: none; }
+    .estrella-wrap.destello::after { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="cielo" aria-hidden="true"><svg id="estrellas" preserveAspectRatio="none"></svg></div>
+
+<main id="vista-boton">
+  <header class="barra">
+    <span class="marca">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EEF4FF" d="M12 1.5 13.9 10.1 22.5 12 13.9 13.9 12 22.5 10.1 13.9 1.5 12 10.1 10.1Z"/></svg>
+      Adhara
+    </span>
+    <button class="icono" id="abrir-config" type="button" aria-label="Configuración">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#F3F6FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+    </button>
+  </header>
+
+  <div class="centro">
+    <div class="aviso-config" id="falta-config" hidden>
+      <p>Antes de usar el botón hay que conectarlo al grupo de Telegram.</p>
+      <button class="btn" id="ir-config" type="button">Configurar</button>
+    </div>
+
+    <p class="instruccion" id="instruccion">Mantén presionado para avisar al grupo</p>
+
+    <div class="estrella-wrap" id="estrella-wrap">
+      <svg class="anillo" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="pista" cx="100" cy="100" r="96"/>
+        <circle class="progreso" id="anillo" cx="100" cy="100" r="96"/>
+      </svg>
+      <button class="estrella" id="btn-principal" type="button" data-tipo="hospital" data-estado="listo" aria-describedby="instruccion">
+        <span class="titulo" id="p-titulo">Ya viene Adhara</span>
+        <span class="sub" id="p-sub">Vamos al hospital</span>
+      </button>
+    </div>
+
+    <p class="estado" id="estado" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="alerta" id="alerta" role="alert" hidden>
+    <p id="alerta-texto"></p>
+    <div class="respaldo" id="respaldo" hidden>
+      <a class="btn" id="llamar" href="#">Llamar</a>
+      <a class="btn sec" id="sms" href="#">Mandar SMS</a>
+    </div>
+  </div>
+
+  <div class="secundarios">
+    <button class="sec-btn ambar" type="button" data-tipo="contracciones" data-estado="listo" aria-describedby="instruccion"><span>Empezaron las contracciones</span></button>
+    <button class="sec-btn rosa" type="button" data-tipo="nacio" data-estado="listo" aria-describedby="instruccion"><span>¡Ya nació!</span></button>
+  </div>
+</main>
+
+<section id="vista-config" aria-labelledby="config-titulo" hidden>
+  <header class="barra">
+    <h1 id="config-titulo" tabindex="-1">Configuración</h1>
+    <button class="btn sec" id="cerrar-config" type="button">Listo</button>
+  </header>
+
+  <p class="nota">Los cambios se guardan solos en este teléfono.</p>
+
+  <div class="bloque">
+    <h2>Prepara el bot de Telegram</h2>
+    <ol class="pasos">
+      <li>En Telegram abre <b>@BotFather</b>, envía <code>/newbot</code>, ponle nombre y copia el token que te da.</li>
+      <li>Agrega ese bot al grupo donde quieren recibir los avisos.</li>
+      <li>Dentro del grupo escribe <code id="cmd-start">/start@nombre_de_tu_bot</code> para que el bot vea el grupo.</li>
+    </ol>
+  </div>
+
+  <form id="form-config" novalidate>
+    <label class="campo"><span>Nombre de la mamá</span>
+      <input id="f-nombre" autocomplete="off" placeholder="Así aparecerá en los avisos">
+    </label>
+
+    <div class="campo">
+      <label for="f-token"><span style="font-weight:600">Token del bot</span></label>
+      <input id="f-token" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="123456789:AA…">
+      <div class="fila"><button type="button" class="btn sec" id="verificar">Verificar token</button><span class="nota" id="bot-info" role="status"></span></div>
+    </div>
+
+    <div class="campo">
+      <label for="f-grupo"><span style="font-weight:600">Grupo que recibe los avisos</span></label>
+      <select id="f-grupo"><option value="">Ningún grupo elegido</option></select>
+      <div class="fila"><button type="button" class="btn sec" id="buscar">Buscar grupos</button><span class="nota" id="grupo-info" role="status"></span></div>
+      <details id="manual">
+        <summary>Escribir el ID del grupo a mano</summary>
+        <input id="f-chat-manual" inputmode="numeric" autocomplete="off" placeholder="-1001234567890">
+        <p class="nota">Si «Buscar grupos» no encuentra nada, abre <a id="link-updates" href="#" target="_blank" rel="noopener">la respuesta de Telegram</a> y copia el número que aparece después de <code>"chat":{"id":</code></p>
+      </details>
+    </div>
+
+    <label class="campo"><span>Hospital (opcional)</span>
+      <input id="f-hospital" autocomplete="off" placeholder="Nombre del hospital">
+    </label>
+
+    <div class="campo">
+      <label class="check"><input type="checkbox" id="f-ubicacion" checked> <span>Mandar mi ubicación con el aviso</span></label>
+      <div class="fila"><button type="button" class="btn sec" id="permitir-ubi">Permitir ubicación</button><span class="nota" id="ubi-info" role="status"></span></div>
+    </div>
+
+    <fieldset>
+      <legend>Contacto de respaldo (opcional)</legend>
+      <p class="nota">Si no hay internet o Telegram falla, el botón ofrece llamarle o mandarle un SMS.</p>
+      <label class="campo"><span>Nombre</span><input id="f-resp-nombre" autocomplete="off" placeholder="Ej. Berkin"></label>
+      <label class="campo"><span>Teléfono</span><input id="f-resp-tel" type="tel" autocomplete="off" placeholder="Ej. 5555 1234"></label>
+    </fieldset>
+
+    <div class="acciones">
+      <button type="button" class="btn" id="probar">Enviar mensaje de prueba</button>
+      <p class="nota" id="prueba-info" role="status"></p>
+    </div>
+  </form>
+
+  <div class="bloque">
+    <h2>Instalar en el teléfono</h2>
+    <p id="instalar-texto">En Chrome toca el menú ⋮ y elige «Agregar a la pantalla principal» o «Instalar app».</p>
+    <button class="btn" id="instalar" type="button" hidden>Instalar Adhara</button>
+  </div>
+
+  <div class="bloque">
+    <h2>Pasar la configuración a otro teléfono</h2>
+    <p class="nota">Configura en tu teléfono, copia el código y mándaselo a ella por chat privado: incluye el token del bot. Ella lo pega aquí y queda lista.</p>
+    <div class="pila" style="margin-top:12px">
+      <button type="button" class="btn sec" id="copiar-codigo">Copiar código</button>
+      <textarea id="f-codigo" rows="3" autocomplete="off" spellcheck="false" placeholder="Pega aquí el código ADHARA1…"></textarea>
+      <button type="button" class="btn sec" id="usar-codigo">Usar este código</button>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const API = 'https://api.telegram.org';
+  const CLAVES = { cfg: 'adhara.cfg', cola: 'adhara.cola', registro: 'adhara.registro' };
+  const SOSTENER_PRINCIPAL = 1500;
+  const SOSTENER_SECUNDARIO = 1000;
+  const CIRC = 2 * Math.PI * 96;
+
+  const $ = (s) => document.querySelector(s);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
+  };
+
+  let cfg = Object.assign({ ubicacion: true, modo: 'cors' }, store.get(CLAVES.cfg, {}));
+  const guardarCfg = () => store.set(CLAVES.cfg, cfg);
+  const listo = () => Boolean(cfg.nombre && cfg.token && cfg.chatId);
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hora = (t) => new Date(t).toLocaleTimeString('es-GT', { hour: 'numeric', minute: '2-digit' });
+  const vibrar = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch {} };
+  const sinMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const TIPOS = {
+    hospital: {
+      nombre: 'Vamos al hospital', ubicacion: true,
+      texto: (h) => `🚨 <b>¡Ya viene Adhara!</b>\n${esc(cfg.nombre)} va camino al hospital${cfg.hospital ? ` (${esc(cfg.hospital)})` : ''}.\n🕐 ${h}`,
+    },
+    contracciones: {
+      nombre: 'Empezaron las contracciones', ubicacion: true,
+      texto: (h) => `⏱️ <b>Empezaron las contracciones</b>\n${esc(cfg.nombre)} les avisa que ya empezaron. Estén pendientes del teléfono.\n🕐 ${h}`,
+    },
+    nacio: {
+      nombre: 'Ya nació', ubicacion: false,
+      texto: (h) => `🎉 <b>¡Ya nació Adhara!</b>\n${esc(cfg.nombre)} les manda la noticia. 💫\n🕐 ${h}`,
+    },
+  };
+  const textoPlano = (html) => html.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+
+  /* ---------- Telegram ---------- */
+  class ErrorTelegram extends Error {
+    constructor(desc, codigo, params) { super(desc || 'Telegram respondió con un error'); this.codigo = codigo; this.params = params || {}; }
+  }
+  class SinRed extends Error {}
+
+  function cuerpo(params) {
+    const b = new URLSearchParams();
+    for (const [k, v] of Object.entries(params || {})) {
+      if (v === undefined || v === null || v === '') continue;
+      b.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+    }
+    return b;
+  }
+
+  // Petición normal: lee la respuesta de Telegram para confirmar la entrega.
+  async function tg(metodo, params, token = cfg.token) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const res = await fetch(`${API}/bot${token}/${metodo}`, { method: 'POST', body: cuerpo(params), signal: ctrl.signal });
+      let data;
+      try { data = await res.json(); } catch { throw new ErrorTelegram('Telegram respondió algo que no se entiende', res.status); }
+      if (!data.ok) throw new ErrorTelegram(data.description, data.error_code, data.parameters);
+      return data.result;
+    } finally { clearTimeout(t); }
+  }
+
+  // Petición sin leer respuesta: sirve si el navegador no deja leer lo que contesta Telegram.
+  async function tgCiego(metodo, params, token = cfg.token) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    try { await fetch(`${API}/bot${token}/${metodo}`, { method: 'POST', mode: 'no-cors', body: cuerpo(params), signal: ctrl.signal }); }
+    finally { clearTimeout(t); }
+  }
+
+  async function enviar(metodo, params, intento = 0) {
+    if (cfg.modo === 'no-cors') {
+      try { await tgCiego(metodo, params); return { confirmado: false }; }
+      catch { throw new SinRed(); }
+    }
+    try {
+      await tg(metodo, params);
+      return { confirmado: true };
+    } catch (e) {
+      if (e instanceof ErrorTelegram) {
+        if (e.params.migrate_to_chat_id && intento < 1) {
+          cfg.chatId = String(e.params.migrate_to_chat_id);
+          guardarCfg();
+          return enviar(metodo, { ...params, chat_id: cfg.chatId }, intento + 1);
+        }
+        if (e.codigo === 429) throw new SinRed();
+        throw e;
+      }
+      if (navigator.onLine === false || e.name === 'AbortError') throw new SinRed();
+      try { await tgCiego(metodo, params); return { confirmado: false }; }
+      catch { throw new SinRed(); }
+    }
+  }
+
+  function explicarError(e) {
+    if (e instanceof ErrorTelegram) {
+      const d = String(e.message || '').toLowerCase();
+      if (e.codigo === 401 || d.includes('unauthorized')) return 'El token del bot no es válido. Revísalo en Configuración.';
+      if (e.codigo === 403) return 'El bot ya no está en el grupo o no puede escribir ahí. Agrégalo de nuevo.';
+      if (d.includes('chat not found')) return 'Telegram no encuentra el grupo. Búscalo de nuevo en Configuración.';
+      return `Telegram respondió: ${e.message}`;
+    }
+    return 'No se pudo conectar con Telegram.';
+  }
+
+  /* ---------- Ubicación ---------- */
+  function ubicacion(maxMs = 15000) {
+    return new Promise((resolver) => {
+      if (!('geolocation' in navigator)) return resolver(null);
+      let hecho = false;
+      const fin = (v) => { if (!hecho) { hecho = true; resolver(v); } };
+      setTimeout(() => fin(null), maxMs);
+      try {
+        navigator.geolocation.getCurrentPosition(
+          (p) => fin({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }),
+          () => fin(null),
+          { enableHighAccuracy: true, timeout: maxMs - 1000, maximumAge: 120000 }
+        );
+      } catch { fin(null); }
+    });
+  }
+  const paramsUbicacion = (pos) => ({
+    chat_id: cfg.chatId, latitude: pos.lat, longitude: pos.lon,
+    horizontal_accuracy: pos.acc ? Math.min(1500, Math.round(pos.acc)) : undefined,
+  });
+
+  /* ---------- Registro y cola ---------- */
+  const registro = () => store.get(CLAVES.registro, []);
+  function registrar(item) {
+    const r = registro().filter((x) => x.ts !== item.ts);
+    r.unshift(item);
+    store.set(CLAVES.registro, r.slice(0, 15));
+  }
+  function actualizarRegistro(ts, cambios) {
+    const r = registro();
+    const i = r.findIndex((x) => x.ts === ts);
+    if (i >= 0) { Object.assign(r[i], cambios); store.set(CLAVES.registro, r); }
+  }
+  const cola = () => store.get(CLAVES.cola, []);
+  function encolar(item) { const c = cola(); c.push(item); store.set(CLAVES.cola, c); }
+
+  const quitarDeCola = (ts) => store.set(CLAVES.cola, cola().filter((x) => x.ts !== ts));
+
+  let vaciando = false;
+  async function vaciarCola() {
+    if (vaciando || !listo() || !cola().length) return;
+    vaciando = true;
+    try {
+      // Se relee la cola en cada vuelta: un aviso nuevo puede entrar mientras se envía otro.
+      for (let it = cola()[0]; it; it = cola()[0]) {
+        const tipo = TIPOS[it.tipo];
+        if (!tipo) { quitarDeCola(it.ts); continue; }
+        try {
+          const r = await enviar('sendMessage', {
+            chat_id: cfg.chatId, parse_mode: 'HTML',
+            text: `${tipo.texto(hora(it.ts))}\n<i>Llegó con retraso porque no había señal.</i>`,
+          });
+          const pos = (cola().find((x) => x.ts === it.ts) || it).pos;
+          quitarDeCola(it.ts);
+          actualizarRegistro(it.ts, { estado: r.confirmado ? 'ok' : 'sin-confirmar', tarde: true });
+          if (pos) await enviar('sendLocation', paramsUbicacion(pos)).catch(() => {});
+        } catch (e) {
+          if (e instanceof SinRed) break;
+          quitarDeCola(it.ts);
+          actualizarRegistro(it.ts, { estado: 'error', error: explicarError(e) });
+        }
+      }
+    } finally {
+      vaciando = false;
+      pintarEstado();
+    }
+  }
+
+  /* ---------- Interfaz del botón ---------- */
+  const principal = $('#btn-principal');
+  const secundarios = [...document.querySelectorAll('.sec-btn')];
+  const anillo = $('#anillo');
+  const wrap = $('#estrella-wrap');
+  const temporizadores = {};
+
+  function botonDe(tipo) { return tipo === 'hospital' ? principal : document.querySelector(`.sec-btn[data-tipo="${tipo}"]`); }
+
+  const ETIQUETAS = {
+    hospital: {
+      listo: ['Ya viene Adhara', 'Vamos al hospital'],
+      sosteniendo: ['Ya viene Adhara', 'Sigue presionando…'],
+      enviando: ['Enviando…', 'Avisando al grupo'],
+      enviado: ['Aviso enviado', 'El grupo ya sabe'],
+      pendiente: ['Sin señal', 'Se enviará solo'],
+      error: ['No se envió', 'Mira el mensaje abajo'],
+    },
+    contracciones: { listo: 'Empezaron las contracciones', sosteniendo: 'Sigue presionando…', enviando: 'Enviando…', enviado: 'Aviso enviado', pendiente: 'Sin señal: pendiente', error: 'No se envió' },
+    nacio: { listo: '¡Ya nació!', sosteniendo: 'Sigue presionando…', enviando: 'Enviando…', enviado: 'Aviso enviado', pendiente: 'Sin señal: pendiente', error: 'No se envió' },
+  };
+
+  function ui(tipo, estado) {
+    const b = botonDe(tipo);
+    b.dataset.estado = estado;
+    const e = ETIQUETAS[tipo][estado];
+    if (tipo === 'hospital') { $('#p-titulo').textContent = e[0]; $('#p-sub').textContent = e[1]; }
+    else b.querySelector('span').textContent = e;
+    clearTimeout(temporizadores[tipo]);
+    if (['enviado', 'pendiente', 'error'].includes(estado)) {
+      temporizadores[tipo] = setTimeout(() => ui(tipo, 'listo'), 6000);
+    }
+  }
+
+  function progreso(tipo, p) {
+    if (tipo === 'hospital') {
+      anillo.style.strokeDashoffset = String(CIRC * (1 - p));
+      anillo.style.opacity = p > 0 ? '1' : '0';
+    }
+    else botonDe(tipo).style.setProperty('--p', String(p));
+  }
+
+  function destello() {
+    if (sinMovimiento()) return;
+    wrap.classList.remove('destello');
+    void wrap.offsetWidth;
+    wrap.classList.add('destello');
+  }
+  wrap.addEventListener('animationend', () => wrap.classList.remove('destello'));
+
+  const NOMBRES_CORTOS = { hospital: '«Vamos al hospital»', contracciones: '«Empezaron las contracciones»', nacio: '«Ya nació»' };
+
+  function pintarEstado() {
+    const r = registro()[0];
+    const el = $('#estado');
+    if (!r) { el.textContent = listo() ? 'Todavía no se ha enviado ningún aviso.' : ''; }
+    else {
+      const n = NOMBRES_CORTOS[r.tipo] || 'Aviso';
+      const h = hora(r.ts).replace(/\s/g, '\u00A0');
+      const frases = {
+        ok: r.tarde ? 'Llegó al grupo cuando volvió la señal.' : 'Llegó al grupo.',
+        'sin-confirmar': 'Salió, pero Telegram no confirmó la entrega.',
+        pendiente: 'Está pendiente: se enviará en cuanto haya señal.',
+        error: 'No se envió.',
+      };
+      el.innerHTML = `Último aviso: <strong>${n}</strong> a las ${h}<br>${frases[r.estado] || ''}`;
+    }
+    pintarAlerta();
+  }
+
+  function pintarAlerta() {
+    const caja = $('#alerta');
+    const pendientes = cola().length;
+    const r = registro()[0];
+    let texto = '';
+    let clase = '';
+    if (pendientes) {
+      clase = 'ambar';
+      texto = pendientes === 1
+        ? 'No hay señal. Hay 1 aviso pendiente: se enviará solo en cuanto vuelva el internet.'
+        : `No hay señal. Hay ${pendientes} avisos pendientes: se enviarán solos en cuanto vuelva el internet.`;
+    } else if (r && r.estado === 'error' && Date.now() - r.ts < 6 * 3600e3) {
+      clase = 'rojo';
+      texto = r.error || 'El aviso no se envió.';
+    }
+    if (!texto) { caja.hidden = true; return; }
+    caja.className = `alerta ${clase}`;
+    $('#alerta-texto').textContent = texto;
+    const tel = (cfg.respTel || '').replace(/[^\d+]/g, '');
+    const resp = $('#respaldo');
+    if (tel) {
+      const quien = cfg.respNombre || 'respaldo';
+      const ultimo = r && TIPOS[r.tipo] ? textoPlano(TIPOS[r.tipo].texto(hora(r.ts))) : '¡Ya viene Adhara!';
+      $('#llamar').href = `tel:${tel}`;
+      $('#llamar').textContent = `Llamar a ${quien}`;
+      $('#sms').href = `sms:${tel}?body=${encodeURIComponent(ultimo)}`;
+      $('#sms').textContent = 'Mandar SMS';
+      resp.hidden = false;
+    } else resp.hidden = true;
+    caja.hidden = false;
+  }
+
+  function pintarDisponibilidad() {
+    const ok = listo();
+    $('#falta-config').hidden = ok;
+    [principal, ...secundarios].forEach((b) => b.setAttribute('aria-disabled', String(!ok)));
+    pintarEstado();
+  }
+
+  let ocupado = false;
+  async function avisar(tipo) {
+    if (ocupado) return;
+    ocupado = true;
+    const t = TIPOS[tipo];
+    const ts = Date.now();
+    const ubiP = cfg.ubicacion && t.ubicacion ? ubicacion() : Promise.resolve(null);
+    ui(tipo, 'enviando');
+    try {
+      const r = await enviar('sendMessage', { chat_id: cfg.chatId, text: t.texto(hora(ts)), parse_mode: 'HTML' });
+      registrar({ tipo, ts, estado: r.confirmado ? 'ok' : 'sin-confirmar' });
+      ui(tipo, 'enviado');
+      vibrar([90, 60, 90, 60, 240]);
+      if (tipo === 'hospital') destello();
+      ubiP.then((pos) => { if (pos) enviar('sendLocation', paramsUbicacion(pos)).catch(() => {}); });
+    } catch (e) {
+      if (e instanceof SinRed) {
+        encolar({ tipo, ts, pos: null });
+        registrar({ tipo, ts, estado: 'pendiente' });
+        ui(tipo, 'pendiente');
+        vibrar([250, 120, 250]);
+        // La ubicación se agrega al aviso pendiente cuando el GPS responda.
+        ubiP.then((pos) => {
+          if (!pos) return;
+          const c = cola();
+          const it = c.find((x) => x.ts === ts);
+          if (it) { it.pos = pos; store.set(CLAVES.cola, c); }
+        });
+      } else {
+        registrar({ tipo, ts, estado: 'error', error: explicarError(e) });
+        ui(tipo, 'error');
+        vibrar([400]);
+      }
+    } finally {
+      ocupado = false;
+      pintarEstado();
+    }
+  }
+
+  function sostenible(boton, ms) {
+    const tipo = boton.dataset.tipo;
+    let activo = false, t0 = 0, raf = 0;
+    const paso = (ahora) => {
+      if (!activo) return;
+      const p = Math.min(1, (ahora - t0) / ms);
+      progreso(tipo, p);
+      if (p >= 1) {
+        activo = false;
+        progreso(tipo, 0);
+        avisar(tipo);
+        return;
+      }
+      raf = requestAnimationFrame(paso);
+    };
+    const empezar = () => {
+      if (activo || ocupado) return;
+      if (!listo()) { toast('Primero hay que configurar el bot.'); return; }
+      if (boton.dataset.estado === 'enviando') return;
+      activo = true;
+      t0 = performance.now();
+      ui(tipo, 'sosteniendo');
+      vibrar(15);
+      raf = requestAnimationFrame(paso);
+    };
+    const soltar = () => {
+      if (!activo) return;
+      activo = false;
+      cancelAnimationFrame(raf);
+      progreso(tipo, 0);
+      ui(tipo, 'listo');
+    };
+    boton.addEventListener('pointerdown', (e) => {
+      if (e.button > 0) return;
+      e.preventDefault();
+      try { boton.setPointerCapture(e.pointerId); } catch {}
+      empezar();
+    });
+    boton.addEventListener('pointerup', soltar);
+    boton.addEventListener('pointercancel', soltar);
+    boton.addEventListener('lostpointercapture', soltar);
+    boton.addEventListener('keydown', (e) => {
+      if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); empezar(); }
+    });
+    boton.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') soltar(); });
+    boton.addEventListener('blur', soltar);
+    boton.addEventListener('contextmenu', (e) => e.preventDefault());
+    boton.addEventListener('click', (e) => e.preventDefault());
+  }
+
+  sostenible(principal, SOSTENER_PRINCIPAL);
+  secundarios.forEach((b) => sostenible(b, SOSTENER_SECUNDARIO));
+
+  /* ---------- Toast ---------- */
+  let toastT;
+  function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('ver');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => el.classList.remove('ver'), 2800);
+  }
+
+  /* ---------- Configuración ---------- */
+  const vistaBoton = $('#vista-boton');
+  const vistaConfig = $('#vista-config');
+  const f = {
+    nombre: $('#f-nombre'), token: $('#f-token'), grupo: $('#f-grupo'), manual: $('#f-chat-manual'),
+    hospital: $('#f-hospital'), ubicacion: $('#f-ubicacion'), respNombre: $('#f-resp-nombre'), respTel: $('#f-resp-tel'),
+    codigo: $('#f-codigo'),
+  };
+
+  function nota(id, texto, tipo = '') {
+    const el = $(id);
+    el.textContent = texto;
+    el.className = `nota ${tipo}`.trim();
+  }
+
+  function pintarBot() {
+    $('#cmd-start').textContent = `/start@${cfg.botUser || 'nombre_de_tu_bot'}`;
+    $('#link-updates').href = cfg.token ? `${API}/bot${cfg.token}/getUpdates` : '#';
+  }
+
+  function pintarGrupos(grupos) {
+    const sel = f.grupo;
+    const lista = grupos || (cfg.chatId ? [{ id: cfg.chatId, titulo: cfg.chatTitulo || `Grupo ${cfg.chatId}` }] : []);
+    sel.innerHTML = '<option value="">Ningún grupo elegido</option>';
+    for (const g of lista) {
+      const o = document.createElement('option');
+      o.value = String(g.id);
+      o.textContent = g.titulo;
+      sel.appendChild(o);
+    }
+    if (cfg.chatId && !lista.some((g) => String(g.id) === String(cfg.chatId))) {
+      const o = document.createElement('option');
+      o.value = String(cfg.chatId);
+      o.textContent = cfg.chatTitulo || `Grupo ${cfg.chatId}`;
+      sel.appendChild(o);
+    }
+    sel.value = cfg.chatId ? String(cfg.chatId) : '';
+  }
+
+  function llenarFormulario() {
+    f.nombre.value = cfg.nombre || '';
+    f.token.value = cfg.token || '';
+    f.hospital.value = cfg.hospital || '';
+    f.ubicacion.checked = cfg.ubicacion !== false;
+    f.respNombre.value = cfg.respNombre || '';
+    f.respTel.value = cfg.respTel || '';
+    f.manual.value = '';
+    pintarGrupos();
+    pintarBot();
+    if (cfg.botUser) nota('#bot-info', `Conectado con @${cfg.botUser}`, 'ok');
+    if (cfg.chatId) nota('#grupo-info', `Avisos a: ${cfg.chatTitulo || cfg.chatId}`, 'ok');
+  }
+
+  function abrirConfig() {
+    llenarFormulario();
+    vistaBoton.hidden = true;
+    vistaConfig.hidden = false;
+    window.scrollTo(0, 0);
+    $('#config-titulo').focus();
+  }
+  function cerrarConfig() {
+    vistaConfig.hidden = true;
+    vistaBoton.hidden = false;
+    pintarDisponibilidad();
+    vaciarCola();
+  }
+  $('#abrir-config').addEventListener('click', abrirConfig);
+  $('#ir-config').addEventListener('click', abrirConfig);
+  $('#cerrar-config').addEventListener('click', cerrarConfig);
+  $('#form-config').addEventListener('submit', (e) => e.preventDefault());
+
+  f.nombre.addEventListener('input', () => { cfg.nombre = f.nombre.value.trim(); guardarCfg(); });
+  f.hospital.addEventListener('input', () => { cfg.hospital = f.hospital.value.trim(); guardarCfg(); });
+  f.respNombre.addEventListener('input', () => { cfg.respNombre = f.respNombre.value.trim(); guardarCfg(); });
+  f.respTel.addEventListener('input', () => { cfg.respTel = f.respTel.value.trim(); guardarCfg(); });
+  f.ubicacion.addEventListener('change', () => { cfg.ubicacion = f.ubicacion.checked; guardarCfg(); });
+  f.token.addEventListener('input', () => {
+    const t = f.token.value.replace(/\s+/g, '');
+    if (t !== cfg.token) { cfg.token = t; cfg.botUser = ''; cfg.modo = 'cors'; guardarCfg(); nota('#bot-info', ''); pintarBot(); }
+  });
+  f.grupo.addEventListener('change', () => {
+    const o = f.grupo.selectedOptions[0];
+    cfg.chatId = f.grupo.value;
+    cfg.chatTitulo = f.grupo.value ? o.textContent : '';
+    guardarCfg();
+    nota('#grupo-info', cfg.chatId ? `Avisos a: ${cfg.chatTitulo}` : '', 'ok');
+  });
+  f.manual.addEventListener('input', () => {
+    const v = f.manual.value.trim();
+    if (!/^-?\d+$/.test(v)) return;
+    cfg.chatId = v;
+    cfg.chatTitulo = `Grupo ${v}`;
+    guardarCfg();
+    pintarGrupos();
+    nota('#grupo-info', `Avisos a: grupo ${v}`, 'ok');
+  });
+
+  $('#verificar').addEventListener('click', async (ev) => {
+    const b = ev.currentTarget;
+    if (!cfg.token) { nota('#bot-info', 'Primero pega el token.', 'mal'); return; }
+    b.disabled = true;
+    nota('#bot-info', 'Verificando…');
+    try {
+      const yo = await tg('getMe', {});
+      cfg.botUser = yo.username || '';
+      guardarCfg();
+      pintarBot();
+      nota('#bot-info', `Conectado con @${cfg.botUser}`, 'ok');
+    } catch (e) {
+      if (e instanceof ErrorTelegram) nota('#bot-info', 'Ese token no es válido. Cópialo otra vez desde @BotFather.', 'mal');
+      else nota('#bot-info', 'No pude hablar con Telegram. Revisa el internet; si el internet está bien, escribe el ID del grupo a mano y envía una prueba.', 'mal');
+    } finally { b.disabled = false; }
+  });
+
+  $('#buscar').addEventListener('click', async (ev) => {
+    const b = ev.currentTarget;
+    if (!cfg.token) { nota('#grupo-info', 'Primero pega el token.', 'mal'); return; }
+    b.disabled = true;
+    nota('#grupo-info', 'Buscando…');
+    try {
+      const updates = await tg('getUpdates', {});
+      const grupos = new Map();
+      const migrados = new Map();
+      for (const u of updates) {
+        const m = u.message || u.edited_message || u.channel_post;
+        if (m && m.migrate_to_chat_id) migrados.set(String(m.chat.id), String(m.migrate_to_chat_id));
+        for (const ch of [m && m.chat, u.my_chat_member && u.my_chat_member.chat, u.chat_member && u.chat_member.chat]) {
+          if (ch && (ch.type === 'group' || ch.type === 'supergroup')) grupos.set(String(ch.id), { id: String(ch.id), titulo: ch.title || `Grupo ${ch.id}` });
+        }
+      }
+      for (const [viejo, nuevo] of migrados) {
+        const g = grupos.get(viejo);
+        grupos.delete(viejo);
+        if (g && !grupos.has(nuevo)) grupos.set(nuevo, { id: nuevo, titulo: g.titulo });
+      }
+      const lista = [...grupos.values()];
+      if (!lista.length) {
+        nota('#grupo-info', `No encontré grupos. Agrega el bot al grupo, escribe ahí /start@${cfg.botUser || 'tu_bot'} y vuelve a buscar.`, 'mal');
+        pintarGrupos();
+        return;
+      }
+      if (lista.length === 1 || !cfg.chatId) {
+        cfg.chatId = lista[0].id;
+        cfg.chatTitulo = lista[0].titulo;
+        guardarCfg();
+      }
+      pintarGrupos(lista);
+      nota('#grupo-info', lista.length === 1 ? `Encontré «${lista[0].titulo}». Quedó elegido.` : `Encontré ${lista.length} grupos. Elige el correcto en la lista.`, 'ok');
+    } catch (e) {
+      if (e instanceof ErrorTelegram) nota('#grupo-info', explicarError(e), 'mal');
+      else { nota('#grupo-info', 'No pude leer los grupos desde este navegador. Escribe el ID a mano.', 'mal'); $('#manual').open = true; }
+    } finally { b.disabled = false; }
+  });
+
+  $('#permitir-ubi').addEventListener('click', async (ev) => {
+    const b = ev.currentTarget;
+    b.disabled = true;
+    nota('#ubi-info', 'Pidiendo permiso…');
+    const pos = await ubicacion(20000);
+    b.disabled = false;
+    if (pos) nota('#ubi-info', 'Ubicación permitida.', 'ok');
+    else nota('#ubi-info', 'No se pudo obtener la ubicación. Revisa que el GPS esté encendido y que Chrome tenga permiso.', 'mal');
+  });
+
+  $('#probar').addEventListener('click', async (ev) => {
+    const b = ev.currentTarget;
+    const falta = [];
+    if (!cfg.nombre) falta.push('el nombre');
+    if (!cfg.token) falta.push('el token');
+    if (!cfg.chatId) falta.push('el grupo');
+    if (falta.length) { nota('#prueba-info', `Falta ${falta.join(', ').replace(/, ([^,]*)$/, ' y $1')}.`, 'mal'); return; }
+    b.disabled = true;
+    nota('#prueba-info', 'Enviando prueba…');
+    const params = { chat_id: cfg.chatId, parse_mode: 'HTML', text: `✅ <b>Prueba del botón de Adhara</b>\nSi ven este mensaje, los avisos de ${esc(cfg.nombre)} van a llegar aquí.` };
+    try {
+      try {
+        await tg('sendMessage', params);
+      } catch (e) {
+        if (e instanceof ErrorTelegram && e.params.migrate_to_chat_id) {
+          cfg.chatId = String(e.params.migrate_to_chat_id);
+          guardarCfg();
+          await tg('sendMessage', { ...params, chat_id: cfg.chatId });
+        } else throw e;
+      }
+      cfg.modo = 'cors';
+      guardarCfg();
+      nota('#prueba-info', 'Prueba enviada. Revisen el grupo: ya está listo.', 'ok');
+    } catch (e) {
+      if (e instanceof ErrorTelegram) { nota('#prueba-info', explicarError(e), 'mal'); }
+      else if (navigator.onLine === false) { nota('#prueba-info', 'No hay internet en este momento.', 'mal'); }
+      else {
+        try {
+          await tgCiego('sendMessage', params);
+          cfg.modo = 'no-cors';
+          guardarCfg();
+          nota('#prueba-info', 'La prueba salió, pero este navegador no deja confirmar la entrega. Revisen el grupo: si llegó, ya está listo.', 'ok');
+        } catch { nota('#prueba-info', 'No se pudo conectar con Telegram.', 'mal'); }
+      }
+    } finally { b.disabled = false; }
+  });
+
+  /* Código para pasar la configuración */
+  const aB64 = (s) => { const bytes = new TextEncoder().encode(s); let bin = ''; bytes.forEach((x) => { bin += String.fromCharCode(x); }); return btoa(bin); };
+  const deB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s), (c) => c.charCodeAt(0)));
+
+  $('#copiar-codigo').addEventListener('click', async () => {
+    if (!cfg.token || !cfg.chatId) { toast('Primero configura el token y el grupo.'); return; }
+    const datos = { v: 1, n: cfg.nombre, t: cfg.token, c: cfg.chatId, ct: cfg.chatTitulo, b: cfg.botUser, h: cfg.hospital, u: cfg.ubicacion, rn: cfg.respNombre, rt: cfg.respTel, m: cfg.modo };
+    const codigo = `ADHARA1.${aB64(JSON.stringify(datos))}`;
+    f.codigo.value = codigo;
+    try { await navigator.clipboard.writeText(codigo); toast('Código copiado.'); }
+    catch { f.codigo.select(); toast('Selecciona y copia el código del cuadro.'); }
+  });
+
+  $('#usar-codigo').addEventListener('click', () => {
+    const v = f.codigo.value.trim();
+    try {
+      if (!v.startsWith('ADHARA1.')) throw new Error();
+      const d = JSON.parse(deB64(v.slice(8)));
+      if (!d.t || !d.c) throw new Error();
+      cfg = Object.assign(cfg, {
+        nombre: d.n || cfg.nombre || '', token: d.t, chatId: String(d.c), chatTitulo: d.ct || '', botUser: d.b || '',
+        hospital: d.h || '', ubicacion: d.u !== false, respNombre: d.rn || '', respTel: d.rt || '', modo: d.m === 'no-cors' ? 'no-cors' : 'cors',
+      });
+      guardarCfg();
+      llenarFormulario();
+      f.codigo.value = '';
+      toast('Configuración cargada.');
+    } catch { toast('Ese código no es válido. Cópialo completo otra vez.'); }
+  });
+
+  /* Instalación */
+  let pedidoInstalar = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    pedidoInstalar = e;
+    $('#instalar').hidden = false;
+    $('#instalar-texto').textContent = 'Así queda como una app en la pantalla de inicio y abre aunque no haya señal.';
+  });
+  $('#instalar').addEventListener('click', async () => {
+    if (!pedidoInstalar) return;
+    pedidoInstalar.prompt();
+    try { await pedidoInstalar.userChoice; } catch {}
+    pedidoInstalar = null;
+    $('#instalar').hidden = true;
+  });
+  window.addEventListener('appinstalled', () => toast('Adhara quedó instalada.'));
+
+  /* ---------- Cielo ---------- */
+  (function dibujarCielo() {
+    const svg = $('#estrellas');
+    let s = 7;
+    const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    svg.setAttribute('viewBox', '0 0 100 100');
+    let html = '';
+    for (let i = 0; i < 46; i++) {
+      const x = (rnd() * 100).toFixed(2), y = (rnd() * 100).toFixed(2);
+      const r = (0.12 + rnd() * 0.22).toFixed(2);
+      const o = (0.25 + rnd() * 0.5).toFixed(2);
+      html += `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${(r * 0.55).toFixed(2)}" fill="#EEF4FF" opacity="${o}"/>`;
+    }
+    svg.innerHTML = html;
+  })();
+
+  /* ---------- Arranque ---------- */
+  pintarDisponibilidad();
+  window.addEventListener('online', vaciarCola);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) vaciarCola(); });
+  setInterval(vaciarCola, 15000);
+  vaciarCola();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {}
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
